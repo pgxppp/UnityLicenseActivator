@@ -2,6 +2,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Chromium;
+using OpenQA.Selenium.Support.UI;
 using System;
 using System.IO;
 using System.Linq;
@@ -13,26 +14,27 @@ namespace UnityLicenseActivator
     public class UnityLicenseCommand : ConsoleAppBase
     {
         private ChromiumDriver driver = null;
+        private WebDriverWait waiter = null;
 
         [Command("auth-ulf")]
         public async Task RunAsync(
             [Option("e")] string email,
             [Option("p")] string password,
-            [Option("a")] string alfFilePath,
-            [Option("d")] float safetyDelay = 1.0f
+            [Option("a")] string alfFilePath
             )
         {
             var fullPath = Path.GetFullPath(alfFilePath);
             Console.WriteLine($"Alf: {alfFilePath} -> {fullPath}");
-            var delayMiliSeconds = (int)(safetyDelay * 1000);
 
             this.driver = CreateDriver();
+            this.waiter = new WebDriverWait(new SystemClock(), this.driver, timeout: TimeSpan.FromSeconds(15.0),  sleepInterval: TimeSpan.FromSeconds(0.1));
+
             try
             {
-                await Login(email, password, delayMiliSeconds);
-                await AuthAlfFile(fullPath, delayMiliSeconds);
-                await ChooseLicenseOptions(delayMiliSeconds);
-                await DownloadUlf(delayMiliSeconds);
+                await Login(email, password);
+                await AuthAlfFile(fullPath);
+                await ChooseLicenseOptions();
+                await DownloadUlf();
             }
             catch(Exception ex)
             {
@@ -43,62 +45,73 @@ namespace UnityLicenseActivator
             await Task.Delay(5000);
         }
 
-        private async Task Login(string email, string password, int safetyDelayMiliSeconds)
+        private async Task OpenUrl(string url)
         {
-            await this.driver.OpenAsyncWithLog("https://license.unity3d.com/manual", safetyDelayMiliSeconds);
+            await Spinner.StartAsync($"OpenUrl {url}...", async (spinner) =>
+            {
+                this.driver.Navigate().GoToUrl(url);
+                spinner.Succeed($"Open {url}.");
+            });
+        }
+
+        private async Task Login(string email, string password)
+        {
+            await this.OpenUrl("https://license.unity3d.com/manual");
             await Spinner.StartAsync($"Login...", async (spinner) =>
             {
-                await Task.Delay(safetyDelayMiliSeconds);
-
-                this.driver.FindElement(By.Id("conversations_create_session_form_email")).SendKeys(email);
-                this.driver.FindElement(By.Id("conversations_create_session_form_password")).SendKeys(password);
-                this.driver.FindElement(By.Name("commit")).Click();
+                this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_email"))).SendKeys(email);
+                this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_password"))).SendKeys(password);
+                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Login Succeed.");
             });
         }
-        private async Task AuthAlfFile(string licenseFile, int safetyDelayMiliSeconds)
+        private async Task AuthAlfFile(string licenseFile)
         {
             await Spinner.StartAsync($"Alf Upload...", async (spinner) =>
             {
-                await Task.Delay(safetyDelayMiliSeconds);
-
-                this.driver.FindElement(By.Id("licenseFile")).SendKeys(licenseFile);
-                this.driver.FindElement(By.Name("commit")).Click();
+                this.waiter.Until(m => m.FindElement(By.Id("licenseFile"))).SendKeys(licenseFile);
+                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Alf Upload Succeed.");
             });
         }
-        private async Task ChooseLicenseOptions(int safetyDelayMiliSeconds)
+        private async Task ChooseLicenseOptions()
         {
             await Spinner.StartAsync($"License Options...", async (spinner) =>
             {
-                // Note: 不安定
-                await Task.Delay(3000);
-                await Task.Delay(safetyDelayMiliSeconds);
-                // this.driver.FindElement(By.Id("type_serial")).GetParent().Click(); // Pro 
-                this.driver.FindElement(By.Id("type_personal")).GetParent().Click();
+                // this.waiter.Until(m => m.FindElement(By.Id("type_serial"))).GetParent().Click(); // Pro 
+                this.waiter.Until(m => m.FindElement(By.Id("type_personal"))).GetParent().Click();
 
-                // this.driver.FindElement(By.Id("option1")).GetParent().Click(); // companyOrOrganizationOver100000Doller
-                // this.driver.FindElement(By.Id("option2")).GetParent().Click(); // companyOrOrganizationLess100000Doller
-                this.driver.FindElement(By.Id("option3")).GetParent().Click();
+                // this.waiter.Until(m => m.FindElement(By.Id("option1"))).GetParent().Click(); // companyOrOrganizationOver100000Doller
+                // this.waiter.Until(m => m.FindElement(By.Id("option2"))).GetParent().Click(); // companyOrOrganizationLess100000Doller
+                this.waiter.Until(m => m.FindElement(By.Id("option3"))).GetParent().Click();
 
                 // Plus / Pro側へ反応する場合があるので可視要素のみでフィルタリング
-                driver.FindElements(By.Name("commit")).Where(m => m.Displayed).First().Click();
+                this.waiter.Until(m => m.FindElements(By.Name("commit"))).Where(m => m.Displayed).First().Click();
 
                 spinner.Succeed($"License Option Selected.");
             });
         }
 
-        private async Task DownloadUlf(int safetyDelayMiliSeconds)
+        private async Task DownloadUlf()
         {
+            string ulfFilePath = string.Empty;
             await Spinner.StartAsync($"Download Ulf...", async (spinner) =>
             {
-                await Task.Delay(safetyDelayMiliSeconds);
+                var previousFiles = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.ulf");
+                this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
+                this.waiter.Until(m => previousFiles.Length != Directory.GetFiles(Directory.GetCurrentDirectory(), "*.ulf").Length);
 
+                var activeFiles = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.ulf");
+                ulfFilePath = activeFiles.Concat(previousFiles).GroupBy(m => m).Where(m => m.Count() == 1).First().First();
+
+                // wait file downloaded
+                await Task.Delay(1000);
                 spinner.Succeed("Download Ulf Succeed.");
             });
+            Console.WriteLine($"UlfFile: {ulfFilePath}");
         }
 
         private static ChromiumDriver CreateDriver()
@@ -106,6 +119,9 @@ namespace UnityLicenseActivator
             ChromeDriverService service = ChromeDriverService.CreateDefaultService();
             var options = new ChromeOptions();
 
+            // ファイルダウンロード時の保存先確認ウインドウを抑制する
+            options.AddUserProfilePreference("disable-popup-blocking", "true");
+            options.AddUserProfilePreference("download.default_directory", Directory.GetCurrentDirectory());
             //ブラウザ非表示
             // service.HideCommandPromptWindow = true;
 
