@@ -47,9 +47,11 @@ namespace UnityLicenseActivator
                 var date = DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss");
                 this.driver.ExportNowPngScreenShot(date);
             }
-            await Task.Delay(5000);
         }
-
+        private async Task SafetyWait()
+        {
+            await Task.Delay(100);
+        }
         private async Task OpenUrl(string url)
         {
             await Spinner.StartAsync($"OpenUrl {url}...", async (spinner) =>
@@ -64,8 +66,11 @@ namespace UnityLicenseActivator
             await this.OpenUrl("https://license.unity3d.com/manual");
             await Spinner.StartAsync($"Login...", async (spinner) =>
             {
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_email"))).SendKeys(email);
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_password"))).SendKeys(password);
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Login Succeed.");
@@ -75,7 +80,9 @@ namespace UnityLicenseActivator
         {
             await Spinner.StartAsync($"Alf Upload...", async (spinner) =>
             {
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("licenseFile"))).SendKeys(licenseFile);
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Alf Upload Succeed.");
@@ -85,13 +92,16 @@ namespace UnityLicenseActivator
         {
             await Spinner.StartAsync($"License Options...", async (spinner) =>
             {
+                await this.SafetyWait();
                 // this.waiter.Until(m => m.FindElement(By.Id("type_serial"))).GetParent().Click(); // Pro 
                 this.waiter.Until(m => m.FindElement(By.Id("type_personal"))).GetParent().Click();
 
+                await this.SafetyWait();
                 // this.waiter.Until(m => m.FindElement(By.Id("option1"))).GetParent().Click(); // companyOrOrganizationOver100000Doller
                 // this.waiter.Until(m => m.FindElement(By.Id("option2"))).GetParent().Click(); // companyOrOrganizationLess100000Doller
                 this.waiter.Until(m => m.FindElement(By.Id("option3"))).GetParent().Click();
 
+                await this.SafetyWait();
                 // Plus / Pro側へ反応する場合があるので可視要素のみでフィルタリング
                 this.waiter.Until(m => m.FindElements(By.Name("commit"))).Where(m => m.Displayed).First().Click();
 
@@ -104,11 +114,13 @@ namespace UnityLicenseActivator
             string ulfFilePath = string.Empty;
             await Spinner.StartAsync($"Download Ulf...", async (spinner) =>
             {
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
+                await this.SafetyWait();
                 this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
 
-                ulfFilePath = Directory.GetFiles(Directory.GetCurrentDirectory()).First();
+                ulfFilePath = Directory.GetFiles(UlfPath).First();
 
                 // wait file downloaded
                 await Task.Delay(1000);
