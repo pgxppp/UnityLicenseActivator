@@ -348,3 +348,7 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+
+# デバッグ時の認証とかを残してると悲しいことになるので削除
+launchSettings.json
