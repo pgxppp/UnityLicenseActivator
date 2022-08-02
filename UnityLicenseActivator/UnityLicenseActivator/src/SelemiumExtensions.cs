@@ -15,7 +15,7 @@ namespace UnityLicenseActivator.Extensions
             return node.FindElement(By.XPath(".."));
         }
 
-        public static void ExportNowPngScreenShot(this ChromiumDriver driver, string fileNameWithoutExtension)
+        public static void ExportNowPngScreenShot(this WebDriver driver, string fileNameWithoutExtension)
         {
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), fileNameWithoutExtension) + ".png";
             driver.GetScreenshot().SaveAsFile(filePath, ScreenshotImageFormat.Png);
