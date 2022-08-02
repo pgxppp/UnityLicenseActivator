@@ -21,7 +21,8 @@ namespace UnityLicenseActivator
         public async Task RunAsync(
             [Option("e")] string email,
             [Option("p")] string password,
-            [Option("a")] string alfFilePath
+            [Option("a")] string alfFilePath,
+            [Option("u")] string ulfFilePath
             )
         {
             var fullPath = Path.GetFullPath(alfFilePath);
@@ -32,16 +33,16 @@ namespace UnityLicenseActivator
             Directory.CreateDirectory(UlfPath);
 
             this.driver = CreateDriver();
-            this.waiter = new WebDriverWait(new SystemClock(), this.driver, timeout: TimeSpan.FromSeconds(15.0),  sleepInterval: TimeSpan.FromSeconds(0.1));
+            this.waiter = new WebDriverWait(new SystemClock(), this.driver, timeout: TimeSpan.FromSeconds(15.0), sleepInterval: TimeSpan.FromSeconds(0.1));
 
             try
             {
                 await Login(email, password);
                 await AuthAlfFile(fullPath);
                 await ChooseLicenseOptions();
-                await DownloadUlf();
+                await DownloadUlf(ulfFilePath);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
                 var date = DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss");
@@ -109,9 +110,8 @@ namespace UnityLicenseActivator
             });
         }
 
-        private async Task DownloadUlf()
+        private async Task DownloadUlf(string ulfFile)
         {
-            string ulfFilePath = string.Empty;
             await Spinner.StartAsync($"Download Ulf...", async (spinner) =>
             {
                 await this.SafetyWait();
@@ -120,13 +120,14 @@ namespace UnityLicenseActivator
                 await this.SafetyWait();
                 this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
 
-                ulfFilePath = Directory.GetFiles(UlfPath).First();
+                var ulf = Directory.GetFiles(UlfPath).First();
+                File.Move(ulf, ulfFile, overwrite: true);
 
                 // wait file downloaded
                 await Task.Delay(1000);
                 spinner.Succeed("Download Ulf Succeed.");
             });
-            Console.WriteLine($"UlfFile: {ulfFilePath}");
+            Console.WriteLine($"UlfFile: {Path.GetFullPath(ulfFile)}");
         }
 
         private static ChromiumDriver CreateDriver()
