@@ -8,6 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityLicenseActivator.Extensions;
+using WebDriverManager;
+using WebDriverManager.DriverConfigs.Impl;
+using WebDriverManager.Helpers;
 
 namespace UnityLicenseActivator
 {
@@ -146,6 +149,8 @@ namespace UnityLicenseActivator
             options.AddArgument("--window-position=-32000,-32000");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
+            // install chrome
+            var _ = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
             var driver = new ChromeDriver(service, options);
 
             return driver;
