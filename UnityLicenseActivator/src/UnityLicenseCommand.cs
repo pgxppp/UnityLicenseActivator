@@ -135,7 +135,10 @@ namespace UnityLicenseActivator
 
         private static ChromiumDriver CreateDriver()
         {
-            ChromeDriverService service = ChromeDriverService.CreateDefaultService();
+            // install chrome driver
+            var _ = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
+
+            var service = ChromeDriverService.CreateDefaultService();
             var options = new ChromeOptions();
 
             // ファイルダウンロード時の保存先確認ウインドウを抑制する
@@ -149,8 +152,6 @@ namespace UnityLicenseActivator
             options.AddArgument("--window-position=-32000,-32000");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
-            // install chrome
-            var _ = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
             var driver = new ChromeDriver(service, options);
 
             return driver;
