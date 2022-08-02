@@ -125,9 +125,9 @@ namespace UnityLicenseActivator
             //ブラウザ非表示
             // service.HideCommandPromptWindow = true;
 
-            // options.AddArgument("--headless");
+            options.AddArgument("--headless");
             options.AddArgument("--no-sandbox");
-            // options.AddArgument("--window-position=-32000,-32000");
+            options.AddArgument("--window-position=-32000,-32000");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
             var driver = new ChromeDriver(service, options);
