@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConsoleAppFramework" Version="4.2.2" />
+	<PackageReference Include="WebDriverManager" Version="2.11.3" />
+	<PackageReference Include="ConsoleAppFramework" Version="4.2.2" />
     <PackageReference Include="Kurukuru" Version="1.4.2" />
     <PackageReference Include="Selenium.Support" Version="4.3.0" />
     <PackageReference Include="Selenium.WebDriver" Version="4.3.0" />
-    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="103.0.5060.13400" />
   </ItemGroup>
 
 </Project>
