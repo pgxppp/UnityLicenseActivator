@@ -122,7 +122,7 @@ namespace UnityLicenseActivator
                 await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
-                await this.SafetyWait();
+                await Task.Delay(10000);
                 this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
 
                 var ulf = Directory.GetFiles(UlfPath).First();
