@@ -75,6 +75,8 @@ namespace UnityLicenseActivator
                 await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_password"))).SendKeys(password);
                 await this.SafetyWait();
+                this.waiter.Until(m => m.FindElement(By.Id("onetrust-accept-btn-handler"))).Click();
+                await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Login Succeed.");
