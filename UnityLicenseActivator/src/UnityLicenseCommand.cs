@@ -75,8 +75,13 @@ namespace UnityLicenseActivator
                 await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_password"))).SendKeys(password);
                 await this.SafetyWait();
-                this.waiter.Until(m => m.FindElement(By.Id("onetrust-accept-btn-handler"))).Click();
-                await this.SafetyWait();
+                try
+                {
+                    this.waiter.Until(m => m.FindElement(By.Id("onetrust-accept-btn-handler"))).Click();
+                    await this.SafetyWait();
+                }
+                catch(Exception _) { }
+                
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Login Succeed.");
@@ -122,8 +127,11 @@ namespace UnityLicenseActivator
                 await this.SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
-                await Task.Delay(10000);
-                this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
+                try
+                {
+                    await Task.Delay(10000);
+                    this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
+                }catch(Exception _) { }
 
                 var ulf = Directory.GetFiles(UlfPath).First();
                 File.Move(ulf, ulfFile, overwrite: true);
