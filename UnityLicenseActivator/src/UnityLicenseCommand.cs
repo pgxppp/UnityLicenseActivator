@@ -25,7 +25,8 @@ namespace UnityLicenseActivator
             [Option("e")] string email,
             [Option("p")] string password,
             [Option("a")] string alfFilePath,
-            [Option("u")] string ulfFilePath
+            [Option("u")] string ulfFilePath,
+            [Option("h")] bool headless = false
             )
         {
             var fullPath = Path.GetFullPath(alfFilePath);
@@ -38,7 +39,7 @@ namespace UnityLicenseActivator
                 Directory.Delete(UlfPath, recursive: true);
             Directory.CreateDirectory(UlfPath);
 
-            this.driver = CreateDriver();
+            this.driver = CreateDriver(headless);
             this.waiter = new WebDriverWait(new SystemClock(), this.driver, timeout: TimeSpan.FromSeconds(15.0), sleepInterval: TimeSpan.FromSeconds(0.1));
 
             try
@@ -53,6 +54,11 @@ namespace UnityLicenseActivator
                 Console.WriteLine(ex.ToString());
                 var date = DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss");
                 this.driver.ExportNowPngScreenShot(date);
+            }
+            finally
+            {
+                this.driver.Quit();
+                this.driver.Dispose();
             }
         }
         private static async Task SafetyWait()
@@ -145,7 +151,7 @@ namespace UnityLicenseActivator
             Console.WriteLine($"UlfFile: {Path.GetFullPath(ulfFile)}");
         }
 
-        private static ChromiumDriver CreateDriver()
+        private static ChromiumDriver CreateDriver(bool isHeadless)
         {
             // install chrome driver
             var chromeDriverPath = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
@@ -158,10 +164,12 @@ namespace UnityLicenseActivator
             options.AddUserProfilePreference("download.default_directory", UlfPath);
 
             //ブラウザ非表示
-            // service.HideCommandPromptWindow = true;
-            options.AddArgument("--window-position=-32000,-32000");
-            options.AddArgument("--headless");
-
+            if (isHeadless)
+            {
+                // service.HideCommandPromptWindow = true;
+                options.AddArgument("--headless");
+                options.AddArgument("--window-position=-32000,-32000");
+            }
             options.AddArgument("--no-sandbox");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
