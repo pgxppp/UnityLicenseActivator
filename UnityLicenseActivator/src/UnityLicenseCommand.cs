@@ -131,12 +131,9 @@ namespace UnityLicenseActivator
                 await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
-                try
-                {
-                    await Task.Delay(10000);
-                    this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
-                }
-                catch (Exception) { }
+
+                await Task.Delay(2000);
+                this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
 
                 var ulf = Directory.GetFiles(UlfPath).First();
                 File.Move(ulf, ulfFile, overwrite: true);
@@ -154,18 +151,18 @@ namespace UnityLicenseActivator
             var chromeDriverPath = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
             // Note: https://github.com/rosolko/WebDriverManager.Net/issues/199
             var options = new ChromeOptions();
-            var service = ChromeDriverService.CreateDefaultService();
             var directory = Path.GetDirectoryName(chromeDriverPath);
 
             // ファイルダウンロード時の保存先確認ウインドウを抑制する
             options.AddUserProfilePreference("disable-popup-blocking", "true");
             options.AddUserProfilePreference("download.default_directory", UlfPath);
-            //ブラウザ非表示
-            service.HideCommandPromptWindow = true;
 
-            options.AddArgument("--headless");
-            options.AddArgument("--no-sandbox");
+            //ブラウザ非表示
+            // service.HideCommandPromptWindow = true;
             options.AddArgument("--window-position=-32000,-32000");
+            options.AddArgument("--headless");
+
+            options.AddArgument("--no-sandbox");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
             var driver = new ChromeDriver(directory, options);
