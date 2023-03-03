@@ -25,17 +25,21 @@ namespace UnityLicenseActivator
             [Option("e")] string email,
             [Option("p")] string password,
             [Option("a")] string alfFilePath,
-            [Option("u")] string ulfFilePath
+            [Option("u")] string ulfFilePath,
+            [Option("h")] bool headless = false
             )
         {
             var fullPath = Path.GetFullPath(alfFilePath);
-            Console.WriteLine($"Alf: {alfFilePath} -> {fullPath}");
+            if (File.Exists(alfFilePath) == false)
+                throw new FileNotFoundException(fullPath);
+            else
+                Console.WriteLine($"Alf: {alfFilePath} -> {fullPath}");
 
             if (Directory.Exists(UlfPath))
                 Directory.Delete(UlfPath, recursive: true);
             Directory.CreateDirectory(UlfPath);
 
-            this.driver = CreateDriver();
+            this.driver = CreateDriver(headless);
             this.waiter = new WebDriverWait(new SystemClock(), this.driver, timeout: TimeSpan.FromSeconds(15.0), sleepInterval: TimeSpan.FromSeconds(0.1));
 
             try
@@ -51,17 +55,23 @@ namespace UnityLicenseActivator
                 var date = DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss");
                 this.driver.ExportNowPngScreenShot(date);
             }
+            finally
+            {
+                this.driver.Quit();
+                this.driver.Dispose();
+            }
         }
-        private async Task SafetyWait()
+        private static async Task SafetyWait()
         {
             await Task.Delay(100);
         }
         private async Task OpenUrl(string url)
         {
-            await Spinner.StartAsync($"OpenUrl {url}...", async (spinner) =>
+            await Spinner.StartAsync($"OpenUrl {url}...", (spinner) =>
             {
                 this.driver.Navigate().GoToUrl(url);
                 spinner.Succeed($"Open {url}.");
+                return Task.CompletedTask;
             });
         }
 
@@ -70,18 +80,18 @@ namespace UnityLicenseActivator
             await this.OpenUrl("https://license.unity3d.com/manual");
             await Spinner.StartAsync($"Login...", async (spinner) =>
             {
-                await this.SafetyWait();
+                await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_email"))).SendKeys(email);
-                await this.SafetyWait();
+                await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("conversations_create_session_form_password"))).SendKeys(password);
-                await this.SafetyWait();
+                await SafetyWait();
                 try
                 {
                     this.waiter.Until(m => m.FindElement(By.Id("onetrust-accept-btn-handler"))).Click();
-                    await this.SafetyWait();
+                    await SafetyWait();
                 }
-                catch(Exception _) { }
-                
+                catch (Exception) { }
+
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Login Succeed.");
@@ -91,9 +101,9 @@ namespace UnityLicenseActivator
         {
             await Spinner.StartAsync($"Alf Upload...", async (spinner) =>
             {
-                await this.SafetyWait();
+                await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("licenseFile"))).SendKeys(licenseFile);
-                await this.SafetyWait();
+                await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
 
                 spinner.Succeed($"Alf Upload Succeed.");
@@ -103,16 +113,16 @@ namespace UnityLicenseActivator
         {
             await Spinner.StartAsync($"License Options...", async (spinner) =>
             {
-                await this.SafetyWait();
+                await SafetyWait();
                 // this.waiter.Until(m => m.FindElement(By.Id("type_serial"))).GetParent().Click(); // Pro 
                 this.waiter.Until(m => m.FindElement(By.Id("type_personal"))).GetParent().Click();
 
-                await this.SafetyWait();
+                await SafetyWait();
                 // this.waiter.Until(m => m.FindElement(By.Id("option1"))).GetParent().Click(); // companyOrOrganizationOver100000Doller
                 // this.waiter.Until(m => m.FindElement(By.Id("option2"))).GetParent().Click(); // companyOrOrganizationLess100000Doller
                 this.waiter.Until(m => m.FindElement(By.Id("option3"))).GetParent().Click();
 
-                await this.SafetyWait();
+                await SafetyWait();
                 // Plus / Pro側へ反応する場合があるので可視要素のみでフィルタリング
                 this.waiter.Until(m => m.FindElements(By.Name("commit"))).Where(m => m.Displayed).First().Click();
 
@@ -124,14 +134,12 @@ namespace UnityLicenseActivator
         {
             await Spinner.StartAsync($"Download Ulf...", async (spinner) =>
             {
-                await this.SafetyWait();
+                await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
                 this.driver.FindElement(By.Name("commit")).Click();
-                try
-                {
-                    await Task.Delay(10000);
-                    this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
-                }catch(Exception _) { }
+
+                await Task.Delay(2000);
+                this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
 
                 var ulf = Directory.GetFiles(UlfPath).First();
                 File.Move(ulf, ulfFile, overwrite: true);
@@ -143,26 +151,29 @@ namespace UnityLicenseActivator
             Console.WriteLine($"UlfFile: {Path.GetFullPath(ulfFile)}");
         }
 
-        private static ChromiumDriver CreateDriver()
+        private static ChromiumDriver CreateDriver(bool isHeadless)
         {
             // install chrome driver
-            var _ = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
-
-            var service = ChromeDriverService.CreateDefaultService();
+            var chromeDriverPath = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
+            // Note: https://github.com/rosolko/WebDriverManager.Net/issues/199
             var options = new ChromeOptions();
+            var directory = Path.GetDirectoryName(chromeDriverPath);
 
             // ファイルダウンロード時の保存先確認ウインドウを抑制する
             options.AddUserProfilePreference("disable-popup-blocking", "true");
             options.AddUserProfilePreference("download.default_directory", UlfPath);
-            //ブラウザ非表示
-            // service.HideCommandPromptWindow = true;
 
-            options.AddArgument("--headless");
+            //ブラウザ非表示
+            if (isHeadless)
+            {
+                // service.HideCommandPromptWindow = true;
+                options.AddArgument("--headless");
+                options.AddArgument("--window-position=-32000,-32000");
+            }
             options.AddArgument("--no-sandbox");
-            options.AddArgument("--window-position=-32000,-32000");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
-            var driver = new ChromeDriver(service, options);
+            var driver = new ChromeDriver(directory, options);
 
             return driver;
         }

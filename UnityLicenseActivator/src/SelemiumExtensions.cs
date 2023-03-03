@@ -1,9 +1,5 @@
-﻿using Kurukuru;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Chromium;
-using OpenQA.Selenium.Support.UI;
+﻿using OpenQA.Selenium;
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace UnityLicenseActivator.Extensions
