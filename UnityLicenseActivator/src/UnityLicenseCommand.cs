@@ -29,7 +29,10 @@ namespace UnityLicenseActivator
             )
         {
             var fullPath = Path.GetFullPath(alfFilePath);
-            Console.WriteLine($"Alf: {alfFilePath} -> {fullPath}");
+            if (File.Exists(alfFilePath) == false)
+                throw new FileNotFoundException(fullPath);
+            else
+                Console.WriteLine($"Alf: {alfFilePath} -> {fullPath}");
 
             if (Directory.Exists(UlfPath))
                 Directory.Delete(UlfPath, recursive: true);
@@ -148,23 +151,24 @@ namespace UnityLicenseActivator
         private static ChromiumDriver CreateDriver()
         {
             // install chrome driver
-            var _ = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
-
-            var service = ChromeDriverService.CreateDefaultService();
+            var chromeDriverPath = new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
+            // Note: https://github.com/rosolko/WebDriverManager.Net/issues/199
             var options = new ChromeOptions();
+            var service = ChromeDriverService.CreateDefaultService();
+            var directory = Path.GetDirectoryName(chromeDriverPath);
 
             // ファイルダウンロード時の保存先確認ウインドウを抑制する
             options.AddUserProfilePreference("disable-popup-blocking", "true");
             options.AddUserProfilePreference("download.default_directory", UlfPath);
             //ブラウザ非表示
-            // service.HideCommandPromptWindow = true;
+            service.HideCommandPromptWindow = true;
 
             options.AddArgument("--headless");
             options.AddArgument("--no-sandbox");
             options.AddArgument("--window-position=-32000,-32000");
             options.AddArgument("--user-agent=unity-license-acitvator");
 
-            var driver = new ChromeDriver(service, options);
+            var driver = new ChromeDriver(directory, options);
 
             return driver;
         }
