@@ -91,8 +91,13 @@ namespace UnityLicenseActivator
                     await SafetyWait();
                 }
                 catch (Exception) { }
-
-                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
+                try
+                {
+                    this.waiter.Until(m => m.FindElement(By.Name("commit")));
+                    await SafetyWait();
+                }
+                catch (Exception) { }
+                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Submit();
 
                 spinner.Succeed($"Login Succeed.");
             });
@@ -104,7 +109,7 @@ namespace UnityLicenseActivator
                 await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Id("licenseFile"))).SendKeys(licenseFile);
                 await SafetyWait();
-                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Click();
+                this.waiter.Until(m => m.FindElement(By.Name("commit"))).Submit();
 
                 spinner.Succeed($"Alf Upload Succeed.");
             });
@@ -124,7 +129,7 @@ namespace UnityLicenseActivator
 
                 await SafetyWait();
                 // Plus / Pro側へ反応する場合があるので可視要素のみでフィルタリング
-                this.waiter.Until(m => m.FindElements(By.Name("commit"))).Where(m => m.Displayed).First().Click();
+                this.waiter.Until(m => m.FindElements(By.Name("commit"))).Where(m => m.Displayed).First().Submit();
 
                 spinner.Succeed($"License Option Selected.");
             });
@@ -136,7 +141,7 @@ namespace UnityLicenseActivator
             {
                 await SafetyWait();
                 this.waiter.Until(m => m.FindElement(By.Name("commit")).Displayed);
-                this.driver.FindElement(By.Name("commit")).Click();
+                this.driver.FindElement(By.Name("commit")).Submit();
 
                 await Task.Delay(2000);
                 this.waiter.Until(m => Directory.GetFiles(UlfPath).Length > 0);
